@@ -1,0 +1,144 @@
+# ============================================================
+# DIPS 更新修了者情報 一括登録CSV  列マッピング定義
+# ------------------------------------------------------------
+# 【出力ヘッダー】
+#   出力CSVの1行目は input/dips_format.csv の1行目を「バイトそのまま」転記する。
+#   1文字でも変えるとDIPS側エラーになるため、出力ヘッダーの正は常に雛形ファイル。
+#   本ファイルの name は可読性と「起動時の雛形ヘッダー一致検証」用に再掲したもの。
+#
+# 【master列の参照】
+#   master列は必ず「ヘッダー名」で参照する（列順ハードコード禁止）。
+#   参照名 = 「修了者マスタ」シート3行目セルの文字列から、改行・空白（半角/全角）を
+#   すべて除去した flatten 形。読込側も同じ flatten を適用して列を突合する。
+#   （例）セル内容 "技能証明申請者番号␊(10文字以内)" → "技能証明申請者番号(10文字以内)"
+#
+# 【値変換・固定値】 config/code_map.yaml を参照。
+# 出典: DIPS操作マニュアル＜更新講習修了者情報連携編＞Ver2026/3/23 / master記入要領。
+# ============================================================
+
+master:
+  sheet: "修了者マスタ"
+  header_row: 3            # ヘッダーは3行目
+  data_start_row: 4        # データは4行目以降（A3:AF303）
+  number_as_string: true   # 番号系の欠落防止（openpyxl data_only=True で読み、str化）
+
+settings_sheet:
+  sheet: "設定"
+  cells:
+    kikan_code: "B2"            # 登録更新講習機関コード（4桁・半角数字）
+    kikan_name: "B3"            # 機関名
+    office_code_default: "B4"   # 登録更新講習機関事務所コード（既定値）
+
+holiday_sheet:
+  sheet: "祝日"
+  data_start_row: 2
+  date_col: "A"                 # Excelシリアル値（祝日）
+  name_col: "B"
+
+# 出力はしないが、検証・期限計算・一覧表示・ログで内部参照する master 列
+master_aux:
+  kanri_no:     "管理No"
+  name:         "氏名"
+  koushu_kubun: "講習区分"               # UC/EL 接頭辞の根拠（code_map.koushu_prefix）
+  issue_date:   "修了証明書発行日"        # 発行日：整合・期限計算の基準
+  link_due:     "DIPS連携期限(自動)"      # 5営業日期限
+  reg_status:   "登録状況"               # 未登録/登録済（運用支援）
+
+# ============================================================
+# 出力17列（順序＝DIPS雛形と一致）
+#   source.type:
+#     master  … master列の値を使用。map=値変換(code_map)、format=書式変換、default=空時の代替
+#     setting … 設定シートのセル値（settings_sheet.cells のキー）
+#     fixed   … 固定値（value 直値、または ref=code_map.fixed のキー）
+# ============================================================
+columns:
+  - index: 1
+    name: "申請ID"
+    source: { type: master, column: "申請ID(自動=証明書番号)" }
+    required: true
+    validate: [not_empty, ascii_alnum]
+
+  - index: 2
+    name: "技能証明申請者番号"
+    source: { type: master, column: "技能証明申請者番号(10文字以内)" }
+    required: true
+    validate: [not_empty, max_len_10]
+
+  - index: 3
+    name: "更新講習に関する情報：登録更新講習機関コード"
+    source: { type: setting, key: kikan_code }
+    required: true
+    validate: [kikan_code_4digit]
+
+  - index: 4
+    name: "更新講習に関する情報：登録更新講習機関事務所コード"
+    source:
+      type: master
+      column: "事務所コード"
+      default: { type: setting, key: office_code_default }   # 空ならB4既定値
+    required: true
+
+  - index: 5
+    name: "更新講習に関する情報：区分"
+    source: { type: master, column: "資格区分", map: kubun }   # 一等→1 / 二等→2
+    required: true
+    validate: [one_of_12]
+
+  - index: 6
+    name: "更新講習に関する情報：停止処分者向け講習受講有無"
+    source: { type: master, column: "停止処分者向け講習受講", map: teishi }  # 無→1 / 有→2（逆転注意）
+    required: true
+    validate: [one_of_12]
+
+  - index: 7
+    name: "無人航空機操縦者身体適性検査に関する情報：無人航空機操縦者身体適性検査証明書番号"
+    source: { type: fixed, ref: pa_certificate_no }   # 常に PA000000000000（master AB列の実PA番号は出力禁止）
+    required: true
+
+  - index: 8
+    name: "無人航空機操縦者身体適性検査に関する情報：受検方法"
+    source: { type: fixed, value: "" }
+
+  - index: 9
+    name: "無人航空機操縦者身体適性検査に関する情報：技能証明の条件"
+    source: { type: fixed, value: "" }
+
+  - index: 10
+    name: "無人航空機操縦者身体適性検査に関する情報：無人航空機操縦者身体適性検査日"
+    source: { type: fixed, value: "" }
+
+  - index: 11
+    name: "無人航空機操縦者身体適性検査に関する情報：公的な証明書等"
+    source: { type: fixed, value: "" }
+
+  - index: 12
+    name: "無人航空機操縦者身体適性検査に関する情報：備考"
+    source: { type: fixed, value: "" }
+
+  - index: 13
+    name: "更新修了証明書に関する情報：更新講習修了証明書番号"
+    source: { type: master, column: "修了証明書番号(自動)" }
+    required: true
+    validate: [shumeisho_no]        # ^(UC|EL)\d{12}$
+
+  - index: 14
+    name: "更新修了証明書に関する情報：更新講習修了日"
+    source: { type: master, column: "講習修了日", format: date_ymd }   # Excelシリアル→yyyy/mm/dd
+    required: true
+    validate: [date_real]
+
+  - index: 15
+    name: "更新修了証明書に関する情報：有効期間満了日"
+    source: { type: master, column: "有効期間満了日(自動)", format: date_ymd }
+    required: true
+    validate: [date_real, not_past]   # 当日比較で過去日不可
+
+  - index: 16
+    name: "登録の状態：状態フラグ"
+    source: { type: master, column: "登録種別(状態フラグ)", map: jotai }  # 1=新規/2=上書き修正/3=無効化
+    required: true
+    validate: [one_of_123]
+
+  - index: 17
+    name: "登録の状態：備考"
+    source: { type: fixed, value: "" }

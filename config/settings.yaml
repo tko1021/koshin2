@@ -1,0 +1,46 @@
+# ============================================================
+# アプリ全体設定
+# data_dir 配下に個人情報（master.xlsx）・出力CSV・履歴ログを集約する。
+# コードは GitHub、データは Dropbox 共有フォルダ、という分離方針。
+# ============================================================
+
+# 修了者データの保管フォルダ（Dropbox 共有）。環境ごとに変更可。
+data_dir: "C:/Users/iishi/Dropbox/★ドローンスクール関係/登録更新機関/修了者管理"
+
+# data_dir からの相対パス
+master_file: "master.xlsx"
+output_dir: "output"            # 生成CSVの出力先
+log_dir: "data"                 # 出力履歴ログの保管先
+export_log: "data/export_log.csv"
+
+# リポジトリ基準の相対パス（コード側に同梱・公式雛形）
+dips_template: "input/dips_format.csv"
+
+# 出力CSV仕様（dips_format.csv に一致させる）
+output:
+  encoding: "utf-8-sig"         # UTF-8 BOM付き
+  newline: "\r\n"               # CRLF
+  quoting: "none"               # クォートなし
+  delimiter: ","
+  max_rows_per_file: 500        # 1ファイル最大件数
+  filename_pattern: "修了者情報_{date}_{seq:02d}.csv"   # date=YYYYMMDD
+  trailing_newline: false       # 雛形と完全一致：行区切りはCRLF、最終行末は改行なし
+
+# 出力後セルフテストの突合基準（生成ファイルを再読込し雛形と照合）
+selftest:
+  check_bom: true               # 先頭 EF BB BF
+  check_header_exact: true      # 1行目が雛形ヘッダーとバイト完全一致
+  check_column_count: 17
+  check_line_sep_crlf: true     # 行区切りは CRLF
+  check_no_trailing_newline: true   # 最終行末に改行が無いこと（雛形と一致）
+
+# 期限・営業日計算
+business_days:
+  link_due_days: 5              # DIPS連携期限＝発行日から5営業日
+  warn_overdue_color: "red"     # 期限超過＝赤
+  warn_imminent_color: "yellow" # 残1営業日以内＝黄
+
+# 有効期間満了日 = 発行日 + 3か月 - 1日（整合チェック用）
+validity:
+  months: 3
+  minus_days: 1

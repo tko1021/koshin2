@@ -1,0 +1,9 @@
+# DIPS更新修了者情報CSV作成システム 依存パッケージ
+# Python 3.11+ 推奨（開発・検証は 3.12.10）
+# venv はリポジトリ外に作成すること（Dropbox同期のロック回避）:
+#   python -m venv C:/Users/iishi/.venvs/koshin
+#   C:/Users/iishi/.venvs/koshin/Scripts/python -m pip install -r requirements.txt
+pyyaml==6.0.3
+openpyxl==3.1.5
+pytest==9.0.3
+streamlit==1.58.0
