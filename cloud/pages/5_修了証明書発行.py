@@ -16,8 +16,7 @@ st.set_page_config(page_title="修了証明書発行", layout="wide")
 auth.require_login()
 
 ASSETS = Path(_common.__file__).resolve().parent.parent / "assets"
-SEAL = next((ASSETS / n for n in ["印影.png", "印影データ_背景透過.png"]
-             if (ASSETS / n).exists()), None)
+SEAL = _common.get_seal_path()   # クラウドはSecrets、ローカルはassets/印影.png
 TEMPLATE = next((ASSETS / n for n in ["修了証明書テンプレート.png"]
                  if (ASSETS / n).exists()), None)
 

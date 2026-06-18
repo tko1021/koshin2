@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import base64
 import copy
 import sys
 import tempfile
@@ -86,6 +87,32 @@ def to_cert_data(e):
         "complete_date": dates.date_to_ymd(e["_comp"]),
         "expiry": dates.date_to_ymd(e["_expiry"]),
     }
+
+
+_seal_done = False
+_seal_path = None
+
+
+def get_seal_path():
+    """印影画像のパスを返す。クラウドは Secrets(seal_png_base64)、ローカルは assets/印影.png。"""
+    global _seal_done, _seal_path
+    if _seal_done:
+        return _seal_path
+    try:
+        import streamlit as st
+        b64 = st.secrets.get("seal_png_base64")
+        if b64:
+            f = Path(tempfile.gettempdir()) / "koshin_seal.png"
+            f.write_bytes(base64.b64decode(b64))
+            _seal_path = f
+            _seal_done = True
+            return _seal_path
+    except Exception:  # noqa: BLE001
+        pass
+    local = _ROOT / "assets" / "印影.png"
+    _seal_path = local if local.exists() else None
+    _seal_done = True
+    return _seal_path
 
 
 def temp_paths():

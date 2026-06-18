@@ -33,3 +33,6 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+
+# 印影はリポジトリに載せない（Secretsで渡す）
+assets/印影.png
