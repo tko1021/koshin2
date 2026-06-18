@@ -10,6 +10,18 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_DIR = REPO_ROOT / "config"
 
+# Googleスプレッドシート連携：サービスアカウント鍵 / 台帳シートID
+SERVICE_ACCOUNT_FILE = REPO_ROOT / "secrets" / "service_account.json"
+
+
+def get_sheet_id(settings: dict | None = None) -> str:
+    """台帳スプレッドシートID。環境変数 KOSHIN_SHEET_ID を優先、無ければ settings.yaml。"""
+    v = os.environ.get("KOSHIN_SHEET_ID")
+    if v:
+        return v.strip()
+    settings = settings if settings is not None else load_settings()
+    return str((settings.get("sheets") or {}).get("spreadsheet_id") or "").strip()
+
 
 def _load_yaml(path: Path) -> dict:
     with open(path, "r", encoding="utf-8") as f:

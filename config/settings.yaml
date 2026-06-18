@@ -5,7 +5,7 @@
 # ============================================================
 
 # 修了者データの保管フォルダ（Dropbox 共有）。環境ごとに変更可。
-data_dir: "C:/Users/iishi/Dropbox/★ドローンスクール関係/登録更新機関/修了者管理"
+data_dir: "C:/Users/iishi/Dropbox/★ドローンスクール関係/DipsCSV自動作成"
 
 # data_dir からの相対パス
 master_file: "master.xlsx"
@@ -44,3 +44,14 @@ business_days:
 validity:
   months: 3
   minus_days: 1
+
+# 機関情報（手入力フォームの既定値 / master.xlsx「設定」シートの初期値）
+organization:
+  kikan_code: "0188"               # 登録更新講習機関コード（4桁）
+  kikan_name: "株式会社ドリームクエスト"
+  office_code_default: "R0188001"  # 事務所コード既定値
+
+# Googleスプレッドシート（修了証明書発行台帳）
+sheets:
+  spreadsheet_id: "1cL8DOoyou8cLls2DApOdN-fXSOJ_fXku5yVGpux98Yo"   # 環境変数 KOSHIN_SHEET_ID 優先。ここに直書きも可
+  worksheet: "修了証明書発行台帳"   # 台帳ワークシート名（無ければ自動作成）

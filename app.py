@@ -15,6 +15,9 @@ from dips.excel_reader import flatten_header
 
 st.set_page_config(page_title="DIPS更新修了者CSV作成", layout="wide")
 
+# はじめての方向け：操作マニュアルへのリンク（サイドバー先頭の「操作マニュアル」ページ）
+st.page_link("pages/0_操作マニュアル.py", label="はじめての方はこちら → 操作マニュアル", icon="📖")
+
 
 @st.cache_data(show_spinner=False)
 def _load_config():

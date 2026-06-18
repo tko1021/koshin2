@@ -76,11 +76,13 @@ def prepare_rows(records, settings_values, code_map, mapping, settings,
         pr.integrity_errors += validators.check_expiry(
             _v(res, COL_EXPIRY), res.issue_date, months, minus)
 
-        # 履歴との重複
-        if pr.apply_id and pr.apply_id in hist_ids:
-            pr.integrity_errors.append(f"申請IDが出力履歴と重複: {pr.apply_id}")
-        if pr.shumeisho and pr.shumeisho in hist_shumeisho:
-            pr.integrity_errors.append(f"修了証明書番号が出力履歴と重複: {pr.shumeisho}")
+        # 履歴との重複（新規(1)のみ重複をエラーとする。上書き修正(2)/無効化(3)は
+        # 同一申請ID・修了証明書番号での再発行が正当な訂正操作なので除外しない）
+        if pr.status_flag == "1":
+            if pr.apply_id and pr.apply_id in hist_ids:
+                pr.integrity_errors.append(f"申請IDが出力履歴と重複: {pr.apply_id}")
+            if pr.shumeisho and pr.shumeisho in hist_shumeisho:
+                pr.integrity_errors.append(f"修了証明書番号が出力履歴と重複: {pr.shumeisho}")
 
         # 状態フラグ整合
         if pr.status_flag in ("2", "3") and pr.apply_id not in applied_ids:
