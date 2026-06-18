@@ -105,3 +105,32 @@ def append_history(entries: list[dict], sheet_id: str | None = None) -> int:
     if rows:
         ws.append_rows(rows, value_input_option="RAW")
     return len(rows)
+
+
+# ---------- 印影画像（Base64をシートに保存。1セル上限50000字のため分割） ----------
+SEAL_WS = "_seal"
+_SEAL_CHUNK = 40000
+
+
+def set_seal_b64(b64: str, sheet_id: str | None = None) -> int:
+    """印影のBase64をシート「_seal」のA列に分割保存（公開リポジトリに載せないため）。"""
+    ss = _spreadsheet(sheet_id)
+    try:
+        ws = ss.worksheet(SEAL_WS)
+        ws.clear()
+    except gspread.WorksheetNotFound:
+        ws = ss.add_worksheet(title=SEAL_WS, rows=50, cols=1)
+    chunks = [b64[i:i + _SEAL_CHUNK] for i in range(0, len(b64), _SEAL_CHUNK)] or [""]
+    ws.update(range_name=f"A1:A{len(chunks)}", values=[[c] for c in chunks],
+              value_input_option="RAW")
+    return len(chunks)
+
+
+def get_seal_b64(sheet_id: str | None = None) -> str:
+    """シート「_seal」A列の分割Base64を連結して返す（無ければ空）。"""
+    ss = _spreadsheet(sheet_id)
+    try:
+        ws = ss.worksheet(SEAL_WS)
+    except gspread.WorksheetNotFound:
+        return ""
+    return "".join(ws.col_values(1))

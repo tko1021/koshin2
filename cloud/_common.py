@@ -98,6 +98,7 @@ def get_seal_path():
     global _seal_done, _seal_path
     if _seal_done:
         return _seal_path
+    # 1) Streamlit Secrets の seal_png_base64
     try:
         import streamlit as st
         b64 = st.secrets.get("seal_png_base64")
@@ -109,6 +110,18 @@ def get_seal_path():
             return _seal_path
     except Exception:  # noqa: BLE001
         pass
+    # 2) Googleシート(_seal タブ)から（クラウドの主経路・Secrets不要）
+    try:
+        b64 = store.get_seal_b64()
+        if b64:
+            f = Path(tempfile.gettempdir()) / "koshin_seal.png"
+            f.write_bytes(base64.b64decode(b64))
+            _seal_path = f
+            _seal_done = True
+            return _seal_path
+    except Exception:  # noqa: BLE001
+        pass
+    # 3) ローカル assets/印影.png
     local = _ROOT / "assets" / "印影.png"
     _seal_path = local if local.exists() else None
     _seal_done = True
