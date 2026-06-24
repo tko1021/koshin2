@@ -69,6 +69,7 @@ def read_people(ws):
             "koushi": ws.cell(row=r, column=21).value or "",
             "gentei_map": gentei_map,
             "kikan_name": kikan_name,
+            "address": org.get("address", ""),
             "kikan_code": kikan,
         })
         r += 1

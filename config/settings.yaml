@@ -49,6 +49,7 @@ validity:
 organization:
   kikan_code: "0188"               # 登録更新講習機関コード（4桁）
   kikan_name: "株式会社ドリームクエスト"
+  address: "〒503-1614 岐阜県大垣市上石津町一之瀬1587番地1"
   office_code_default: "R0188001"  # 事務所コード既定値
 
 # Googleスプレッドシート（修了証明書発行台帳）

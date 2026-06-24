@@ -80,6 +80,7 @@ def to_cert_data(e):
     """enrich済みの1名 → certificate.generate_certificate の data。"""
     return {
         "kikan_name": ORG.get("kikan_name", ""), "kikan_code": KIKAN,
+        "address": ORG.get("address", ""),
         "cert_no": e["_cert"], "name": e.get("氏名", ""),
         "applicant_no": str(e.get("技能証明申請者番号", "")), "grade": e.get("等級区分", ""),
         "gentei_map": {air: _split(e.get(col)) for air, col in GENTEI_COLS.items()},

@@ -218,6 +218,10 @@ def _draw_form(c, d, W, H, seal_image=None):
     # 登録更新講習機関名 ＋ 印
     c.setFont(MINCHO, 11)
     c.drawRightString(R - 22 * mm, ty - 13 * mm, f"登録更新講習機関　{d.get('kikan_name','')}")
+    # 団体名の下に住所を1行（印影 R-20mm/ty-19mm とは右端 R-22mm で左側に分離）
+    c.setFont(MINCHO, 8.5)
+    c.drawRightString(R - 22 * mm, ty - 18 * mm, d.get("address", ""))
+    c.setFont(MINCHO, 11)
     _draw_seal(c, seal_image, R - 20 * mm, ty - 19 * mm, 16 * mm)
     # 機関コード
     c.drawRightString(R - 22 * mm, ty - 26 * mm,
