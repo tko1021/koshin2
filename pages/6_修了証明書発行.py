@@ -115,18 +115,14 @@ if not people:
     st.warning("master.xlsx に修了者がいません。「masterに入力」ページで登録してください。")
     st.stop()
 
-def _gentei_summary(gmap):
-    parts = []
-    for air, items in gmap.items():
-        if items:
-            short = air.replace("回転翼航空機（", "").replace("）", "")
-            parts.append(f"{short}:{'・'.join(items)}")
-    return " / ".join(parts)
+def _gentei_summary(gmap, grade=""):
+    # 表示ロジックはPDF（certificate.display_gentei）と共通。マルチのみ・「・」で1行連結。
+    return "・".join(certificate.display_gentei(gmap, grade))
 
 
 st.dataframe(pd.DataFrame([{"証明書番号": p["cert_no"], "氏名": p["name"], "資格区分": p["grade"],
                            "修了日": p["complete_date"], "有効期限": p["expiry"],
-                           "担当講師": p["koushi"], "限定解除": _gentei_summary(p["gentei_map"])}
+                           "担当講師": p["koushi"], "限定解除": _gentei_summary(p["gentei_map"], p["grade"])}
                           for p in people]),
              hide_index=True, use_container_width=True)
 st.caption("※担当講師・限定解除事項は「masterに入力」「master編集」ページで人ごとに登録した内容を使用します。")

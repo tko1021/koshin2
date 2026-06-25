@@ -30,19 +30,16 @@ if not people:
     st.stop()
 
 
-def _gentei_sum(gmap):
-    parts = []
-    for air, items in gmap.items():
-        if items:
-            parts.append(f"{air.replace('回転翼航空機（', '').replace('）', '')}:{'・'.join(items)}")
-    return " / ".join(parts)
+def _gentei_sum(gmap, grade=""):
+    # 表示ロジックはPDF（certificate.display_gentei）と共通。マルチのみ・「・」で1行連結。
+    return "・".join(certificate.display_gentei(gmap, grade))
 
 
 view = []
 for e in people:
     d = _common.to_cert_data(e)
     view.append({"証明書番号": d["cert_no"], "氏名": d["name"], "資格区分": d["grade"],
-                 "担当講師": d["koushi"], "限定解除": _gentei_sum(d["gentei_map"])})
+                 "担当講師": d["koushi"], "限定解除": _gentei_sum(d["gentei_map"], d["grade"])})
 st.dataframe(pd.DataFrame(view), hide_index=True, use_container_width=True)
 
 labels = ["▼ 全員分を一括発行"] + [f'{e["氏名"]}（{e["_cert"]}）' for e in people]
