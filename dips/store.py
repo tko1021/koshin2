@@ -107,6 +107,35 @@ def append_history(entries: list[dict], sheet_id: str | None = None) -> int:
     return len(rows)
 
 
+# ---------- 経営メモ（代表ダッシュボード用） ----------
+MEMO_WS = "経営メモ"
+MEMO_HEADER = ["日時", "分類", "関連事業", "内容"]
+
+
+def memo_ws(sheet_id: str | None = None):
+    return get_or_create_ws(_spreadsheet(sheet_id), MEMO_WS, MEMO_HEADER)
+
+
+def read_memos(sheet_id: str | None = None) -> list[dict]:
+    """経営メモを読み、各行を dict で返す（新しい順）。"""
+    ws = memo_ws(sheet_id)
+    rows = ws.get_all_values()
+    out = []
+    for row in rows[1:]:
+        if not any(c.strip() for c in row):
+            continue
+        out.append({h: (row[j] if j < len(row) else "") for j, h in enumerate(MEMO_HEADER)})
+    out.reverse()
+    return out
+
+
+def append_memo(values: dict, sheet_id: str | None = None) -> None:
+    """1件のメモを末尾に追記。"""
+    ws = memo_ws(sheet_id)
+    ws.append_row([str(values.get(h, "") or "") for h in MEMO_HEADER],
+                  value_input_option="RAW")
+
+
 # ---------- 印影画像（Base64をシートに保存。1セル上限50000字のため分割） ----------
 SEAL_WS = "_seal"
 _SEAL_CHUNK = 40000
