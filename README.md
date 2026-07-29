@@ -61,6 +61,19 @@ C:/Users/iishi/.venvs/koshin/Scripts/streamlit run app.py
 - 出力後は生成ファイルを再読込し、雛形と **BOM・ヘッダー完全一致・列数17・CRLF・
   末尾改行なし** を自動セルフテストします。
 
+### 帳票作成
+
+「帳票作成」ページで、機関が保存・提出する帳票を master.xlsx から作成できます
+（保存先は `data_dir/帳票/`）。対象期間（修了日）と講習区分で絞り込めます。
+
+| 帳票 | 内容 | 形式 |
+|---|---|---|
+| 修了者名簿 | 1行=1名。氏名・生年月日・申請者番号・修了日・発行日・修了証明書番号・有効期間満了日・担当講師（Excelは限定解除事項の列も出力） | PDF（A4横）/ Excel |
+| 講習実施記録 | 修了日×講習区分で集計。一等/二等の人数・合計・担当講師・受講者氏名 | PDF（A4横）/ Excel |
+
+生成ロジックは `dips/reports.py`。PDFは同梱の IPAex フォントを埋め込むため、
+Windows・Streamlit Cloud のどちらでも同じ体裁で出力されます。
+
 ### 受講者側の事前準備（重要）
 
 受講者は **DIPS2.0 で当機関の事務所コードを登録済み**である必要があります。
@@ -113,8 +126,9 @@ C:/Users/iishi/.venvs/koshin/Scripts/python -m pytest -q
 ```
 koshin/
 ├── app.py                  # Streamlit UI
+├── pages/                  # Streamlit 各ページ（入力・編集・CSV作成・証明書・帳票）
 ├── config/                 # settings / mapping / code_map（YAML）
-├── dips/                   # コアロジック（読込・変換・検証・出力・セルフテスト・履歴）
+├── dips/                   # コアロジック（読込・変換・検証・出力・セルフテスト・履歴・帳票）
 ├── tests/                  # pytest
 ├── input/                  # dips_format.csv（公式雛形）※gitignore
 ├── docs/                   # 仕様書

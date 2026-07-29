@@ -90,6 +90,23 @@ def to_cert_data(e):
     }
 
 
+def to_roster_person(e):
+    """enrich済みの1名 → dips.reports.build_roster_rows の入力 dict。"""
+    return {
+        "cert_no": e["_cert"], "name": e.get("氏名", ""),
+        "applicant_no": str(e.get("技能証明申請者番号", "")),
+        "birth": dates.date_to_ymd(dates.to_date(e.get("生年月日")))
+        if dates.to_date(e.get("生年月日")) else "",
+        "koushu": e.get("講習区分") or "更新講習",
+        "grade": e.get("等級区分", ""),
+        "koushi": e.get("担当講師") or "",
+        "complete_date": dates.date_to_ymd(e["_comp"]),
+        "issue_date": dates.date_to_ymd(e["_issue"]),
+        "expiry": dates.date_to_ymd(e["_expiry"]),
+        "gentei_map": {air: _split(e.get(col)) for air, col in GENTEI_COLS.items()},
+    }
+
+
 _seal_done = False
 _seal_path = None
 
