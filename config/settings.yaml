@@ -52,6 +52,20 @@ organization:
   address: "〒503-1614 岐阜県大垣市上石津町一之瀬1587番地1"
   office_code_default: "R0188001"  # 事務所コード既定値
 
+# 発注書の既定値。発注者（自社）情報は空欄なら organization の値を使う。
+# 取引条件はフォームの初期値。案件ごとに画面で上書きできる。
+order:
+  issuer_name: ""                  # 空なら organization.kikan_name
+  issuer_address: ""               # 空なら organization.address
+  tel: ""
+  fax: ""
+  person: ""                       # 発注担当者名
+  delivery_place: ""               # 納品場所の既定値
+  payment_terms: "月末締め翌月末払い"
+  tax_rate: 10                     # 既定の消費税率(%)。明細ごとに8%へ変更可
+  units: ["式", "個", "台", "本", "枚", "人", "時間", "日", "月", "セット"]
+  po_no_pattern: "PO-{date}-{seq:02d}"   # date=YYYYMMDD
+
 # Googleスプレッドシート（修了証明書発行台帳）
 sheets:
   spreadsheet_id: "1cL8DOoyou8cLls2DApOdN-fXSOJ_fXku5yVGpux98Yo"   # 環境変数 KOSHIN_SHEET_ID 優先。ここに直書きも可
