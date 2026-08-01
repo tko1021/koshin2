@@ -19,6 +19,15 @@ if not people:
     st.info("登録がありません。「修了者を登録」ページから追加してください。")
     st.stop()
 
+SEARCH_KEYS = ["氏名", "_cert", "技能証明申請者番号", "担当講師"]
+query = st.text_input("🔍 検索（氏名・証明書番号・技能証明申請者番号・担当講師）", "")
+if query:
+    q = query.strip().lower()
+    people = [e for e in people if any(q in str(e.get(k, "")).lower() for k in SEARCH_KEYS)]
+    if not people:
+        st.warning("該当する修了者が見つかりません。")
+        st.stop()
+
 st.dataframe(pd.DataFrame([{"証明書番号": e["_cert"], "氏名": e["氏名"], "資格区分": e["等級区分"],
                            "発行日": e["証明書発行日"], "有効期限": dates.date_to_ymd(e["_expiry"]),
                            "担当講師": e.get("担当講師", "")} for e in people]),
