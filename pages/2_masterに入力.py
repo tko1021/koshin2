@@ -14,7 +14,7 @@ import pandas as pd
 import streamlit as st
 from openpyxl import load_workbook
 
-from dips import certificate, config, dates, intake
+from dips import certificate, config, dates, intake, validators
 
 st.set_page_config(page_title="masterに入力", layout="wide")
 
@@ -156,9 +156,11 @@ with st.form("master_entry", clear_on_submit=True):
     submitted = st.form_submit_button("➕ master.xlsx に追記", type="primary")
 
 if submitted:
-    if not name or not appno:
-        st.error("氏名と技能証明申請者番号は必須です。")
+    errs = validators.validate_person_input(name, appno, comp, issue, phys, koushi)
+    if errs:
+        st.error("入力を確認してください。\n\n" + "\n".join(f"- {m}" for m in errs))
         st.stop()
+    name, appno = name.strip(), appno.strip()
     r = _next_free_row(ws)
     values = [koushu, grade, appno, name, birth, addr, teishi, comp, issue, state, phys]
     for j, v in enumerate(values, start=1):

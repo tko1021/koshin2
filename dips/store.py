@@ -10,6 +10,8 @@
 """
 from __future__ import annotations
 
+import re
+
 import gspread
 
 from . import sheets
@@ -32,15 +34,72 @@ def _spreadsheet(sheet_id: str | None = None):
     return sheets.open_spreadsheet(sheet_id)
 
 
+def _norm(s) -> str:
+    """列名の突合用に空白（半角/全角/改行）を除去する。"""
+    return re.sub(r"\s+", "", str(s or ""))
+
+
+def _ensure_grid(ws, header: list[str]) -> None:
+    """ワークシートの列数がヘッダーより少ないと追記が
+    「exceeds grid limits」で失敗するため、足りなければ広げる。"""
+    try:
+        if ws.col_count < len(header):
+            ws.resize(rows=ws.row_count, cols=len(header))
+    except AttributeError:      # col_count を持たない実装（テストのフェイク等）
+        pass
+
+
 def get_or_create_ws(ss, title: str, header: list[str]):
     try:
         ws = ss.worksheet(title)
     except gspread.WorksheetNotFound:
         ws = ss.add_worksheet(title=title, rows=1000, cols=max(len(header), 10))
+    _ensure_grid(ws, header)
     cur = ws.row_values(1)
     if not any(cur):
         ws.update(range_name="A1", values=[header])
     return ws
+
+
+def header_index(ws, header: list[str]) -> dict[str, int]:
+    """シート1行目の実際のヘッダーから「列名 → 0始まり列番号」を作る。
+
+    列順ハードコードを避けるための突合。列が入れ替わっていても、余分な列が
+    足されていても正しい列に読み書きできる。突合は空白を無視して行う。
+    必要な列が見つからない場合は、直せるように列名を挙げて例外にする。
+    """
+    actual = ws.row_values(1)
+    pos = {}
+    for j, cell in enumerate(actual):
+        key = _norm(cell)
+        if key and key not in pos:       # 同名列は左側を優先
+            pos[key] = j
+    idx, missing = {}, []
+    for h in header:
+        j = pos.get(_norm(h))
+        if j is None:
+            missing.append(h)
+        else:
+            idx[h] = j
+    if missing:
+        raise RuntimeError(
+            f"シート「{ws.title}」の1行目に必要な列がありません: {'、'.join(missing)}\n"
+            "1行目の列名を元に戻すか、該当列を追加してください。")
+    return idx
+
+
+def _row_for(values: dict, idx: dict[str, int], base: list[str] | None = None) -> list[str]:
+    """列名→列位置の対応に従って、書き込む1行を組み立てる。
+
+    base を渡すと既存行の値を土台にするので、シートに独自に足された列
+    （備考など）を上書きで消してしまわない。
+    """
+    width = max(idx.values()) + 1
+    row = list(base or [])
+    row += [""] * (width - len(row))
+    for h, j in idx.items():
+        row[j] = str(values.get(h, "") or "")
+    return row
 
 
 # ---------- 修了者マスタ ----------
@@ -52,11 +111,14 @@ def read_people(sheet_id: str | None = None) -> list[dict]:
     """修了者マスタを読み、各行を dict で返す（_row=シート行番号 2始まり）。"""
     ws = master_ws(sheet_id)
     rows = ws.get_all_values()
+    if not rows:
+        return []
+    idx = header_index(ws, MASTER_HEADER)
     out = []
     for i, row in enumerate(rows[1:], start=2):       # 1行目=ヘッダ
         if not any(c.strip() for c in row):
             continue
-        d = {h: (row[j] if j < len(row) else "") for j, h in enumerate(MASTER_HEADER)}
+        d = {h: (row[j] if j < len(row) else "") for h, j in idx.items()}
         d["_row"] = i
         out.append(d)
     return out
@@ -65,16 +127,17 @@ def read_people(sheet_id: str | None = None) -> list[dict]:
 def append_person(values: dict, sheet_id: str | None = None) -> int:
     """1名を末尾に追記。返り値=追記した行番号。"""
     ws = master_ws(sheet_id)
-    row = [str(values.get(h, "") or "") for h in MASTER_HEADER]
-    ws.append_row(row, value_input_option="RAW")
+    idx = header_index(ws, MASTER_HEADER)
+    ws.append_row(_row_for(values, idx), value_input_option="RAW")
     return len(ws.get_all_values())
 
 
 def update_person(rownum: int, values: dict, sheet_id: str | None = None) -> None:
     """指定行を上書き更新。"""
     ws = master_ws(sheet_id)
-    row = [str(values.get(h, "") or "") for h in MASTER_HEADER]
-    end_col = gspread.utils.rowcol_to_a1(rownum, len(MASTER_HEADER))
+    idx = header_index(ws, MASTER_HEADER)
+    row = _row_for(values, idx, base=ws.row_values(rownum))
+    end_col = gspread.utils.rowcol_to_a1(rownum, len(row))
     ws.update(range_name=f"A{rownum}:{end_col}", values=[row], value_input_option="RAW")
 
 

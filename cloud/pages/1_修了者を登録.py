@@ -5,7 +5,7 @@ import datetime as dt
 import streamlit as st
 
 import _common
-from dips import auth, certificate, dates, intake, store
+from dips import auth, certificate, dates, intake, store, validators
 
 st.set_page_config(page_title="修了者を登録", layout="wide")
 auth.require_login()
@@ -13,7 +13,21 @@ auth.require_login()
 today = dt.date.today()
 st.title("📋 修了者を登録")
 
-people = _common.enrich(store.read_people())
+# 直前の登録結果（st.rerun() を挟むと success が消えるため session_state 経由で表示）
+flash = st.session_state.pop("_reg_flash", None)
+if flash:
+    st.success(flash)
+
+try:
+    people = _common.enrich(store.read_people())
+except Exception as e:  # noqa: BLE001
+    st.error("Googleスプレッドシートを読み込めませんでした。登録はできません。\n\n"
+             "・シートがサービスアカウントに共有されているか（編集者）\n"
+             "・Secrets の [gcp_service_account] とシートIDが正しいか\n"
+             "・「修了者マスタ」タブの1行目の列名が変更されていないか\n"
+             "を確認してください。")
+    st.exception(e)
+    st.stop()
 
 
 def preview_cert(koushu, issue):
@@ -63,9 +77,14 @@ with st.form("reg", clear_on_submit=True):
     ok = st.form_submit_button("➕ 登録する", type="primary")
 
 if ok:
-    if not name or not appno:
-        st.error("氏名と技能証明申請者番号は必須です。")
+    errs = validators.validate_person_input(name, appno, comp, issue, phys, koushi)
+    if errs:
+        st.error("入力を確認してください。\n\n" + "\n".join(f"- {m}" for m in errs))
         st.stop()
+    appno = appno.strip()
+    name = name.strip()
+    dup = state == "新規" and any(
+        str(p.get("技能証明申請者番号", "")).strip() == appno for p in people)
     values = {
         "講習区分": koushu, "等級区分": grade, "技能証明申請者番号": appno, "氏名": name,
         "生年月日": dates.date_to_ymd(birth) if birth else "", "住所": addr,
@@ -77,10 +96,16 @@ if ok:
     try:
         store.append_person(values)
     except Exception as e:  # noqa: BLE001
-        st.error("登録に失敗しました（シート接続/共有設定を確認）。")
+        st.error(f"登録に失敗しました: {e}\n\n"
+                 "シートの共有設定（サービスアカウントを編集者に）と、"
+                 "「修了者マスタ」タブの1行目の列名を確認してください。")
         st.exception(e)
         st.stop()
-    st.success(f"登録しました: {name}　{pv_cert}")
+    msg = f"登録しました: {name}　{pv_cert}"
+    if dup:
+        msg += (f"\n\n⚠ 技能証明申請者番号 {appno} は既に登録済みです。"
+                "訂正のつもりだった場合は、状態を「上書き修正」にして登録し直してください。")
+    st.session_state["_reg_flash"] = msg
     st.rerun()
 
 st.divider()

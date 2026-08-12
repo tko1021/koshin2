@@ -6,7 +6,7 @@ import pandas as pd
 import streamlit as st
 
 import _common
-from dips import auth, certificate, dates, store
+from dips import auth, certificate, dates, store, validators
 
 st.set_page_config(page_title="一覧・編集", layout="wide")
 auth.require_login()
@@ -14,7 +14,20 @@ auth.require_login()
 today = dt.date.today()
 st.title("✏️ 修了者の一覧・編集・削除")
 
-people = _common.enrich(store.read_people())
+flash = st.session_state.pop("_edit_flash", None)
+if flash:
+    st.success(flash)
+
+try:
+    people = _common.enrich(store.read_people())
+except Exception as e:  # noqa: BLE001
+    st.error("Googleスプレッドシートを読み込めませんでした。\n\n"
+             "・シートがサービスアカウントに共有されているか（編集者）\n"
+             "・Secrets の [gcp_service_account] とシートIDが正しいか\n"
+             "・「修了者マスタ」タブの1行目の列名が変更されていないか\n"
+             "を確認してください。")
+    st.exception(e)
+    st.stop()
 if not people:
     st.info("登録がありません。「修了者を登録」ページから追加してください。")
     st.stop()
@@ -85,9 +98,11 @@ with st.form("edit"):
     upd = st.form_submit_button("💾 更新", type="primary")
 
 if upd:
-    if not name or not appno:
-        st.error("氏名と技能証明申請者番号は必須です。")
+    errs = validators.validate_person_input(name, appno, comp, issue, phys, koushi)
+    if errs:
+        st.error("入力を確認してください。\n\n" + "\n".join(f"- {m}" for m in errs))
         st.stop()
+    name, appno = name.strip(), appno.strip()
     values = {
         "講習区分": koushu, "等級区分": grade, "技能証明申請者番号": appno, "氏名": name,
         "生年月日": dates.date_to_ymd(birth) if birth else "", "住所": addr,
@@ -96,14 +111,24 @@ if upd:
         "身体適性検査証明書番号": phys, "担当講師": koushi,
         **{k: "、".join(v) for k, v in gentei.items()},
     }
-    store.update_person(e["_row"], values)
-    st.success(f"更新しました: {name}")
+    try:
+        store.update_person(e["_row"], values)
+    except Exception as ex:  # noqa: BLE001
+        st.error(f"更新に失敗しました: {ex}")
+        st.exception(ex)
+        st.stop()
+    st.session_state["_edit_flash"] = f"更新しました: {name}"
     st.rerun()
 
 st.divider()
 st.subheader("🗑 削除")
 if st.checkbox(f"「{e['氏名']}（{e['_cert']}）」を削除する"):
     if st.button("🗑 削除実行"):
-        store.delete_person(e["_row"])
-        st.success("削除しました。")
+        try:
+            store.delete_person(e["_row"])
+        except Exception as ex:  # noqa: BLE001
+            st.error(f"削除に失敗しました: {ex}")
+            st.exception(ex)
+            st.stop()
+        st.session_state["_edit_flash"] = f"削除しました: {e['氏名']}"
         st.rerun()

@@ -92,6 +92,60 @@ FIELD_VALIDATORS = {
 }
 
 
+# ---- 登録フォームの入力チェック ----
+
+def validate_person_input(name: str, applicant_no: str, complete_date, issue_date,
+                          phys_no: str = "", koushi: str = "") -> list[str]:
+    """修了者登録フォームの入力を、DIPS へ出す前に検証する。
+
+    シートに保存できてしまう値でも、CSV作成時や DIPS の一括登録で弾かれるものが
+    あるため（半角英数以外の申請者番号・禁則文字・発行日が修了日より前など）、
+    登録の時点で気づけるようにエラー文言の一覧を返す。空リストなら問題なし。
+    """
+    errs: list[str] = []
+
+    nm = (name or "").strip()
+    if not nm:
+        errs.append("氏名を入力してください。")
+    else:
+        bad = find_forbidden_chars(nm)
+        if bad:
+            errs.append(f"氏名に使えない文字が含まれています: {' '.join(bad)}")
+
+    no = (applicant_no or "").strip()
+    if not no:
+        errs.append("技能証明申請者番号を入力してください。")
+    else:
+        if ascii_alnum(no):
+            errs.append("技能証明申請者番号は半角の英数字のみです"
+                        "（全角文字・ハイフン・空白は使えません）。")
+        if max_len_10(no):
+            errs.append(f"技能証明申請者番号は10文字以内です（現在 {len(no)} 文字）。")
+
+    comp = dates.to_date(complete_date)
+    issue = dates.to_date(issue_date)
+    if comp is None:
+        errs.append("修了日を入力してください。")
+    if issue is None:
+        errs.append("証明書発行日を入力してください。")
+    if comp is not None and issue is not None and issue < comp:
+        errs.append(f"証明書発行日（{dates.date_to_ymd(issue)}）が"
+                    f"修了日（{dates.date_to_ymd(comp)}）より前になっています。")
+
+    pa = (phys_no or "").strip()
+    if pa and ascii_alnum(pa):
+        errs.append("身体適性検査証明書番号は半角の英数字のみです"
+                    "（空欄にすると PA000000000000 で出力されます）。")
+
+    ks = (koushi or "").strip()
+    if ks:
+        bad = find_forbidden_chars(ks)
+        if bad:
+            errs.append(f"担当講師に使えない文字が含まれています: {' '.join(bad)}")
+
+    return errs
+
+
 # ---- 整合チェック（行単位）----
 
 def check_shumeisho_consistency(shumeisho: str, kikan_code: str, issue_date: _dt.date | None) -> list[str]:
